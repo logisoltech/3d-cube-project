@@ -238,8 +238,8 @@ export default function CubeModel() {
         <CubeEdges />
       </Suspense>
       <OrbitControls
-        enableZoom={false}
-        enableRotate={false}
+        enableZoom={true}
+        enableRotate={true}
         enablePan={false}
       />
     </Canvas>
