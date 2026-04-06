@@ -201,31 +201,37 @@ function DashboardCube() {
   
 
   return (
-    <mesh ref={meshRef} material={materials} rotation={[0, -0.16, 0]}>
-      <boxGeometry args={[2, 2, 2]} />
-    </mesh>
+    <group ref={meshRef} position={[1, -0.4, 1]} rotation={[0, -0.16, 0]}>
+      <mesh material={materials}>
+        <boxGeometry args={[1.5, 1.5, 1.5]} />
+      </mesh>
+      <lineSegments>
+        <edgesGeometry args={[new THREE.BoxGeometry(1.51, 1.51, 1.51)]} />
+        <lineBasicMaterial color="#00b4ff" linewidth={2} transparent opacity={0.7} />
+      </lineSegments>
+    </group>
   );
 }
-// Glowing edges wireframe
-function CubeEdges() {
-  const edgesRef = useRef();
+// // Glowing edges wireframe
+// function CubeEdges() {
+//   const edgesRef = useRef();
 
   
 
-  return (
-    <lineSegments ref={edgesRef} rotation={[0, -0.16, 0]}>
-      <edgesGeometry args={[new THREE.BoxGeometry(2.01, 2.01, 2.01)]} />
-      <lineBasicMaterial color="#00b4ff" linewidth={2} transparent opacity={0.7} />
-    </lineSegments>
-  );
-}
+//   return (
+//     <lineSegments ref={edgesRef} position={[1, -0.4, 1]} rotation={[0, -0.16, 0]}>
+//       <edgesGeometry args={[new THREE.BoxGeometry(1.51, 1.51, 1.51)]} />
+//       <lineBasicMaterial color="#00b4ff" linewidth={2} transparent opacity={0.7} />
+//     </lineSegments>
+//   );
+// }
 
 
 
 export default function CubeModel() {
   return (
     <Canvas
-      camera={{ position: [3.5, 2, 3.5], fov: 50 }}
+      camera={{ position: [4, 2, 4], fov: 60 }}
       style={{ width: "100%", height: "100%", background: "transparent" }}
       gl={{ alpha: true }}
       onCreated={({ gl }) => {
@@ -235,12 +241,13 @@ export default function CubeModel() {
       <ambientLight intensity={1} />
       <Suspense fallback={null}>
         <DashboardCube />
-        <CubeEdges />
+        {/* <CubeEdges /> */}
       </Suspense>
       <OrbitControls
         enableZoom={true}
         enableRotate={true}
         enablePan={false}
+        target={[1, -0.4, 1]}
       />
     </Canvas>
   );
