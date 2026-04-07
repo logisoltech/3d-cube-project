@@ -1,130 +1,110 @@
 "use client";
 
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { Suspense, useMemo, useRef } from "react";
 import * as THREE from "three";
 
-// Creates diagonal heading texture for the QDCI face
-function createDiagonalTexture(text, width = 500, height = 500) {
+// ---------------- HELPERS ----------------
+
+function roundedRectPath(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ---------------- TEXTURES ----------------
+
+function createDiagonalTexture(text, width = 1024, height = 1024) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
 
-  // Enable high-quality text rendering
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.textRenderingOptimization = "optimizeQuality";
-
-  // Background - semi-transparent dark blue
-  ctx.fillStyle = "rgba(5, 15, 45, 0.85)";
+  ctx.fillStyle = "#2b4ccc";
   ctx.fillRect(0, 0, width, height);
 
-  // Border glow
-  ctx.strokeStyle = "rgba(0, 180, 255, 0.6)";
-  ctx.lineWidth = 4.5;
-  ctx.strokeRect(3, 3, width - 6, height - 6);
+  roundedRectPath(ctx, 6, 6, width - 12, height - 12, 28);
+  ctx.fillStyle = "#2b4ccc";
+  ctx.fill();
 
-  // Inner subtle border
-  ctx.strokeStyle = "rgba(0, 180, 255, 0.2)";
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(15, 15, width - 30, height - 30);
-
-  // Diagonal text
-  ctx.save();
-  ctx.translate(width / 2, height / 2);
-  ctx.rotate(-Math.PI / 6); // ~30 degrees diagonal
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 117px Arial";
+  ctx.font = "bold 234px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+
+  ctx.save();
+  ctx.translate(width / 2, height / 2);
+  ctx.rotate(-Math.PI / 6);
   ctx.fillText(text, 0, 0);
   ctx.restore();
 
   const texture = new THREE.CanvasTexture(canvas);
-  texture.needsUpdate = true;
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.generateMipmaps = false;
+  texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
 
-// Creates a canvas texture with text for a cube face
-function createFaceTexture(title, items, width = 500, height = 500) {
+function createFaceTexture(title, items, width = 1024, height = 1024) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
 
-  // Enable high-quality text rendering
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.textRenderingOptimization = "optimizeQuality";
-
-  // Background - semi-transparent dark blue
-  ctx.fillStyle = "rgba(5, 15, 45, 0.85)";
+  ctx.fillStyle = "#2b4ccc";
   ctx.fillRect(0, 0, width, height);
 
-  // Border glow
-  ctx.strokeStyle = "rgba(0, 180, 255, 0.6)";
-  ctx.lineWidth = 4.5;
-  ctx.strokeRect(3, 3, width - 6, height - 6);
+  roundedRectPath(ctx, 6, 6, width - 12, height - 12, 28);
+  ctx.fillStyle = "#2b4ccc";
+  ctx.fill();
 
-  // Inner subtle border
-  ctx.strokeStyle = "rgba(0, 180, 255, 0.2)";
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(15, 15, width - 30, height - 30);
-
-  // Title
-  ctx.fillStyle = "#00d4ff";
-  ctx.font = "bold 35px Arial";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 70px Arial";
   ctx.textAlign = "center";
-  ctx.fillText(title, width / 2, 53);
+  ctx.fillText(title, width / 2, 106);
 
-  // Divider line under title
-  ctx.strokeStyle = "rgba(0, 180, 255, 0.4)";
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(255,255,255,0.4)";
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(39, 70);
-  ctx.lineTo(width - 39, 70);
+  ctx.moveTo(78, 140);
+  ctx.lineTo(width - 78, 140);
   ctx.stroke();
 
-  // Items
   ctx.textAlign = "left";
-  ctx.font = "20px Arial";
-  let y = 107;
+  ctx.font = "40px Arial";
+
+  let y = 214;
 
   items.forEach((item) => {
-    // Item label
     ctx.fillStyle = "#ffffff";
-    ctx.font = "20px Arial";
-    ctx.fillText(item.label, 34, y);
+    ctx.fillText(item.label, 68, y);
 
-    // Item value (right-aligned)
     if (item.value) {
-      ctx.fillStyle = "#00ff88";
-      ctx.font = "bold 20px Arial";
       ctx.textAlign = "right";
-      ctx.fillText(item.value, width - 34, y);
+      ctx.fillText(item.value, width - 68, y);
       ctx.textAlign = "left";
     }
 
-    y += 37;
+    y += 74;
   });
 
   const texture = new THREE.CanvasTexture(canvas);
-  texture.needsUpdate = true;
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.generateMipmaps = false;
+  texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
 
-// Face data for each side of the cube
+// ---------------- DATA ----------------
+
 const faceData = [
   {
-    // Right face (+X)
     title: "QUALITY",
     items: [
       { label: "Pharma Sterile", value: "98%" },
@@ -134,7 +114,6 @@ const faceData = [
     ],
   },
   {
-    // Left face (-X)
     title: "DELIVERY",
     items: [
       { label: "On-Time Shipment", value: "97%" },
@@ -149,7 +128,6 @@ const faceData = [
     items: [],
   },
   {
-    // Bottom face (-Y)
     title: "INVENTORY",
     items: [
       { label: "Raw Materials", value: "85%" },
@@ -159,7 +137,6 @@ const faceData = [
     ],
   },
   {
-    // Front face (+Z)
     title: "SAFETY",
     items: [
       { label: "Packaging Material Defect", value: "0" },
@@ -170,7 +147,6 @@ const faceData = [
     ],
   },
   {
-    // Back face (-Z)
     title: "COST",
     items: [
       { label: "Scrap Rate", value: "0.8%" },
@@ -181,73 +157,68 @@ const faceData = [
   },
 ];
 
+// ---------------- CUBE ----------------
+
 function DashboardCube() {
   const meshRef = useRef();
 
-  // Create materials for each face
   const materials = useMemo(() => {
     return faceData.map((face) => {
       const texture = face.diagonal
         ? createDiagonalTexture(face.title)
         : createFaceTexture(face.title, face.items);
-      return new THREE.MeshBasicMaterial({
+
+      return new THREE.MeshPhongMaterial({
         map: texture,
-        transparent: false,
-        side: THREE.FrontSide,
+        color: "#ffffff",
+        specular: "#ffffff",
+        shininess: 320,
+        emissive: "#000000",
       });
     });
   }, []);
 
-  
-
   return (
-    <group ref={meshRef} position={[1, -0.4, 1]} rotation={[0, -0.16, 0]}>
+    <group ref={meshRef} position={[0, -2.3, 0]} rotation={[0, -0.16, 0]}>
+      {/* Main cube */}
       <mesh material={materials}>
-        <boxGeometry args={[1.5, 1.5, 1.5]} />
+        <boxGeometry args={[1.9, 1.9, 1.9]} />
       </mesh>
+
+      {/* Clean glow edges */}
       <lineSegments>
-        <edgesGeometry args={[new THREE.BoxGeometry(1.51, 1.51, 1.51)]} />
-        <lineBasicMaterial color="#00b4ff" linewidth={2} transparent opacity={0.7} />
+        <edgesGeometry args={[new THREE.BoxGeometry(1.92, 1.92, 1.92)]} />
+        <lineBasicMaterial color="#ffffff" transparent opacity={0.75} />
       </lineSegments>
     </group>
   );
 }
-// // Glowing edges wireframe
-// function CubeEdges() {
-//   const edgesRef = useRef();
 
-  
-
-//   return (
-//     <lineSegments ref={edgesRef} position={[1, -0.4, 1]} rotation={[0, -0.16, 0]}>
-//       <edgesGeometry args={[new THREE.BoxGeometry(1.51, 1.51, 1.51)]} />
-//       <lineBasicMaterial color="#00b4ff" linewidth={2} transparent opacity={0.7} />
-//     </lineSegments>
-//   );
-// }
-
-
+// ---------------- SCENE ----------------
 
 export default function CubeModel() {
   return (
     <Canvas
-      camera={{ position: [4, 2, 4], fov: 60 }}
+      camera={{ position: [3.2, 1.4, 3.2], fov: 60 }}
       style={{ width: "100%", height: "100%", background: "transparent" }}
-      gl={{ alpha: true }}
+      gl={{ alpha: true, antialias: true }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
       }}
     >
-      <ambientLight intensity={1} />
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[5, 5, 5]} intensity={1.2} />
+      <directionalLight position={[-3, -2, -5]} intensity={0.4} />
+
       <Suspense fallback={null}>
         <DashboardCube />
-        {/* <CubeEdges /> */}
       </Suspense>
+
       <OrbitControls
-        enableZoom={true}
-        enableRotate={true}
+        enableZoom
+        enableRotate
         enablePan={false}
-        target={[1, -0.4, 1]}
+        target={[0, -2.3, 0]}
       />
     </Canvas>
   );
