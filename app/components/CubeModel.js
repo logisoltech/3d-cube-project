@@ -5,8 +5,6 @@ import { OrbitControls } from "@react-three/drei";
 import { Suspense, useMemo, useRef } from "react";
 import * as THREE from "three";
 
-// ---------------- HELPERS ----------------
-
 function roundedRectPath(ctx, x, y, width, height, radius) {
   const r = Math.min(radius, width / 2, height / 2);
   ctx.beginPath();
@@ -22,13 +20,15 @@ function roundedRectPath(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-// ---------------- TEXTURES ----------------
-
 function createDiagonalTexture(text, width = 1024, height = 1024) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.textRenderingOptimization = "optimizeQuality";
 
   ctx.fillStyle = "#2b4ccc";
   ctx.fillRect(0, 0, width, height);
@@ -37,19 +37,40 @@ function createDiagonalTexture(text, width = 1024, height = 1024) {
   ctx.fillStyle = "#2b4ccc";
   ctx.fill();
 
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 234px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  const diagonalVignette = ctx.createRadialGradient(
+    width / 2,
+    height / 2,
+    width * 0.12,
+    width / 2,
+    height / 2,
+    width * 0.78
+  );
+  diagonalVignette.addColorStop(0, "rgba(255, 255, 255, 0.035)");
+  diagonalVignette.addColorStop(1, "rgba(255, 255, 255, 0.0)");
+  ctx.fillStyle = diagonalVignette;
+  ctx.fillRect(0, 0, width, height);
+
+  roundedRectPath(ctx, 28, 28, width - 56, height - 56, 18);
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.26)";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
 
   ctx.save();
   ctx.translate(width / 2, height / 2);
   ctx.rotate(-Math.PI / 6);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 234px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   ctx.fillText(text, 0, 0);
   ctx.restore();
 
   const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
   texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
   return texture;
 }
 
@@ -59,6 +80,10 @@ function createFaceTexture(title, items, width = 1024, height = 1024) {
   canvas.height = height;
   const ctx = canvas.getContext("2d");
 
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.textRenderingOptimization = "optimizeQuality";
+
   ctx.fillStyle = "#2b4ccc";
   ctx.fillRect(0, 0, width, height);
 
@@ -66,12 +91,30 @@ function createFaceTexture(title, items, width = 1024, height = 1024) {
   ctx.fillStyle = "#2b4ccc";
   ctx.fill();
 
+  const faceVignette = ctx.createRadialGradient(
+    width / 2,
+    height / 2,
+    width * 0.12,
+    width / 2,
+    height / 2,
+    width * 0.78
+  );
+  faceVignette.addColorStop(0, "rgba(255, 255, 255, 0.035)");
+  faceVignette.addColorStop(1, "rgba(255, 255, 255, 0.0)");
+  ctx.fillStyle = faceVignette;
+  ctx.fillRect(0, 0, width, height);
+
+  roundedRectPath(ctx, 28, 28, width - 56, height - 56, 18);
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.26)";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 70px Arial";
   ctx.textAlign = "center";
   ctx.fillText(title, width / 2, 106);
 
-  ctx.strokeStyle = "rgba(255,255,255,0.4)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.42)";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(78, 140);
@@ -80,14 +123,16 @@ function createFaceTexture(title, items, width = 1024, height = 1024) {
 
   ctx.textAlign = "left";
   ctx.font = "40px Arial";
-
   let y = 214;
 
   items.forEach((item) => {
     ctx.fillStyle = "#ffffff";
+    ctx.font = "40px Arial";
     ctx.fillText(item.label, 68, y);
 
     if (item.value) {
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 40px Arial";
       ctx.textAlign = "right";
       ctx.fillText(item.value, width - 68, y);
       ctx.textAlign = "left";
@@ -97,11 +142,13 @@ function createFaceTexture(title, items, width = 1024, height = 1024) {
   });
 
   const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
   texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
   return texture;
 }
-
-// ---------------- DATA ----------------
 
 const faceData = [
   {
@@ -157,8 +204,6 @@ const faceData = [
   },
 ];
 
-// ---------------- CUBE ----------------
-
 function DashboardCube() {
   const meshRef = useRef();
 
@@ -170,31 +215,27 @@ function DashboardCube() {
 
       return new THREE.MeshPhongMaterial({
         map: texture,
-        color: "#ffffff",
-        specular: "#ffffff",
+        specular: new THREE.Color("#ffffff"),
         shininess: 320,
-        emissive: "#000000",
+        reflectivity: 1,
+        emissive: new THREE.Color("#1f1f1f"),
       });
     });
   }, []);
 
   return (
     <group ref={meshRef} position={[0, -2.3, 0]} rotation={[0, -0.16, 0]}>
-      {/* Main cube */}
       <mesh material={materials}>
         <boxGeometry args={[1.9, 1.9, 1.9]} />
       </mesh>
 
-      {/* Clean glow edges */}
       <lineSegments>
-        <edgesGeometry args={[new THREE.BoxGeometry(1.92, 1.92, 1.92)]} />
-        <lineBasicMaterial color="#ffffff" transparent opacity={0.75} />
+        <edgesGeometry args={[new THREE.BoxGeometry(1.92, 1.92, 1.925)]} />
+        <lineBasicMaterial color="#ffffff" transparent opacity={0.8} />
       </lineSegments>
     </group>
   );
 }
-
-// ---------------- SCENE ----------------
 
 export default function CubeModel() {
   return (
@@ -204,19 +245,22 @@ export default function CubeModel() {
       gl={{ alpha: true, antialias: true }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
+        gl.physicallyCorrectLights = true;
       }}
     >
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[5, 5, 5]} intensity={1.2} />
-      <directionalLight position={[-3, -2, -5]} intensity={0.4} />
+      <ambientLight intensity={0.52} />
+      <directionalLight position={[5, 5, 5]} intensity={1.25} />
+      <directionalLight position={[-3, -2, -5]} intensity={0.46} />
+      <directionalLight position={[0, 1.5, -6]} intensity={0.36} color="#d6e4ff" />
+      <pointLight position={[3.5, 2.2, 5.5]} intensity={0.62} color="#ffffff" />
 
       <Suspense fallback={null}>
         <DashboardCube />
       </Suspense>
 
       <OrbitControls
-        enableZoom
-        enableRotate
+        enableZoom={true}
+        enableRotate={true}
         enablePan={false}
         target={[0, -2.3, 0]}
       />
