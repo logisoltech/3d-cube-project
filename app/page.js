@@ -239,16 +239,16 @@ export default function Home() {
                     <thead>
                       <tr>
                         <th>Metric</th>
-                        <th>Value</th>
-                        <th>Remarks</th>
+                        {/* <th>Value</th>
+                        <th>Remarks</th> */}
                       </tr>
                     </thead>
                     <tbody>
                       {selectedRows.map((row, index) => (
                         <tr key={`${row.category}-${row.metric}-${index}`}>
                           <td>{row.metric}</td>
-                          <td>{row.value}</td>
-                          <td>{row.remarks || "-"}</td>
+                          {/* <td>{row.value}</td>
+                          <td>{row.remarks || "-"}</td> */}
                         </tr>
                       ))}
                     </tbody>
@@ -292,7 +292,7 @@ export default function Home() {
           border-radius: 14px;
           border: 1px solid rgba(255, 255, 255, 0.22);
           background: rgba(8, 31, 79, 0.5);
-          color: #ffffff;
+          color: #d4d4d4;
           backdrop-filter: blur(10px);
           -webkit-backdrop-filter: blur(10px);
           box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
@@ -320,7 +320,7 @@ export default function Home() {
           position: absolute;
           inset: 0;
           z-index: 10;
-          background: rgba(0, 0, 0, 0.45);
+          background: rgba(0, 0, 0, 0.6);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -333,9 +333,9 @@ export default function Home() {
           overflow: hidden;
           border-radius: 22px;
           border: 1px solid rgba(255, 255, 255, 0.24);
-          background: rgba(255, 255, 255, 0.18);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          background: rgba(0, 0, 0, 0.8);
+          backdrop-filter: blur(200px);
+          -webkit-backdrop-filter: blur(200px);
           box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
         }
 
