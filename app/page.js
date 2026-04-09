@@ -14,6 +14,8 @@ export default function Home() {
   const [rows, setRows] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState(null);
+  const [isMetricModalOpen, setIsMetricModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [excelError, setExcelError] = useState("");
 
@@ -98,6 +100,16 @@ export default function Home() {
 
   function closeModal() {
     setIsModalOpen(false);
+  }
+
+  function openMetric(row) {
+    setSelectedMetric(row);
+    setIsMetricModalOpen(true);
+  }
+
+  function closeMetricModal() {
+    setIsMetricModalOpen(false);
+    setSelectedMetric(null);
   }
 
   return (
@@ -212,7 +224,7 @@ export default function Home() {
           ))}
       </div>
 
-      {/* Modal */}
+      {/* Category Modal */}
       {isModalOpen && (
         <div className="modalOverlay" onClick={closeModal}>
           <div
@@ -234,31 +246,53 @@ export default function Home() {
 
             <div className="modalBody">
               {selectedRows.length ? (
-                <div className="tableWrap">
-                  <table className="dataTable">
-                    <thead>
-                      <tr>
-                        <th>Metric</th>
-                        {/* <th>Value</th>
-                        <th>Remarks</th> */}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedRows.map((row, index) => (
-                        <tr key={`${row.category}-${row.metric}-${index}`}>
-                          <td>{row.metric}</td>
-                          {/* <td>{row.value}</td>
-                          <td>{row.remarks || "-"}</td> */}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="metricGrid">
+                  {selectedRows.map((row, index) => (
+                    <button
+                      key={`${row.category}-${row.metric}-${index}`}
+                      className="metricButton"
+                      onClick={() => openMetric(row)}
+                    >
+                      {row.metric}
+                    </button>
+                  ))}
                 </div>
               ) : (
                 <div className="emptyState">
                   No data found for this category.
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Metric Detail Modal */}
+      {isMetricModalOpen && selectedMetric && (
+        <div className="modalOverlay metricOverlay" onClick={closeMetricModal}>
+          <div
+            className="metricDetailCard"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modalHeader">
+              <div>
+                <h2 className="modalTitle">{selectedMetric.metric}</h2>
+                <p className="modalSubtext">{selectedMetric.category}</p>
+              </div>
+              <button className="closeButton" onClick={closeMetricModal}>
+                ×
+              </button>
+            </div>
+
+            <div className="metricDetailBody">
+              <div className="detailRow">
+                <span className="detailLabel">Value</span>
+                <span className="detailValue">{selectedMetric.value || "-"}</span>
+              </div>
+              <div className="detailRow">
+                <span className="detailLabel">Remarks</span>
+                <span className="detailValue">{selectedMetric.remarks || "-"}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -379,36 +413,74 @@ export default function Home() {
           overflow: auto;
         }
 
-        .tableWrap {
-          overflow: auto;
-          border-radius: 16px;
+        .metricGrid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 12px;
         }
 
-        .dataTable {
-          width: 100%;
-          border-collapse: collapse;
-          background: rgba(255, 255, 255, 0.92);
-          color: #10213f;
-          border-radius: 16px;
+        .metricButton {
+          padding: 16px 18px;
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          background: rgba(255, 255, 255, 0.08);
+          color: #fff;
+          font-size: 15px;
+          text-align: left;
+          cursor: pointer;
+          transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+        }
+
+        .metricButton:hover {
+          transform: translateY(-2px);
+          background: rgba(18, 72, 160, 0.5);
+          border-color: rgba(255, 255, 255, 0.35);
+        }
+
+        .metricOverlay {
+          z-index: 20;
+        }
+
+        .metricDetailCard {
+          width: min(520px, 100%);
+          border-radius: 22px;
+          border: 1px solid rgba(255, 255, 255, 0.24);
+          background: rgba(0, 0, 0, 0.85);
+          backdrop-filter: blur(200px);
+          -webkit-backdrop-filter: blur(200px);
+          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
           overflow: hidden;
         }
 
-        .dataTable th,
-        .dataTable td {
-          padding: 14px 16px;
-          text-align: left;
-          border-bottom: 1px solid rgba(16, 33, 63, 0.08);
-          font-size: 14px;
-          vertical-align: top;
+        .metricDetailBody {
+          padding: 22px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
         }
 
-        .dataTable th {
-          background: #eaf1ff;
-          font-weight: 700;
+        .detailRow {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          padding: 16px;
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .dataTable tr:last-child td {
-          border-bottom: none;
+        .detailLabel {
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        .detailValue {
+          font-size: 18px;
+          color: #fff;
+          line-height: 1.4;
         }
 
         .emptyState {
@@ -427,12 +499,6 @@ export default function Home() {
             font-size: 22px;
           }
 
-          .dataTable th,
-          .dataTable td {
-            padding: 12px;
-            font-size: 13px;
-          }
-
           .modalCard {
             max-height: 86vh;
           }
@@ -444,6 +510,19 @@ export default function Home() {
           .categoryButton,
           .statusCard {
             font-size: 14px;
+          }
+
+          .metricGrid {
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+          }
+
+          .metricButton {
+            padding: 14px;
+            font-size: 14px;
+          }
+
+          .detailValue {
+            font-size: 16px;
           }
         }
       `}</style>
