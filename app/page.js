@@ -120,7 +120,10 @@ export default function Home() {
   }, [rows, selectedCategory]);
 
   function openCategory(category) {
-    setSelectedCategory(category);
+    const match = categories.find(
+      (c) => c.toLowerCase() === category.toLowerCase()
+    );
+    setSelectedCategory(match || category);
     setIsModalOpen(true);
   }
 
@@ -213,7 +216,7 @@ export default function Home() {
           pointerEvents: "auto",
         }}
       >
-        <CubeModel cubeData={cubeData} />
+        <CubeModel cubeData={cubeData} onFaceClick={(title) => openCategory(title)} />
       </div>
 
       {/* Left stacked buttons */}

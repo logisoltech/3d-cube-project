@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 // Creates diagonal heading texture for the 1QDCI face
@@ -140,9 +140,11 @@ const DEFAULT_FACES = [
 const FACE_STEP = Math.PI / 2;
 const START_ROTATION_Y = -0.26;
 
-function DashboardCube({ faceData }) {
+function DashboardCube({ faceData, onFaceClick }) {
   const groupRef = useRef(null);
-  const { gl } = useThree();
+  const meshRef = useRef(null);
+  const { gl, camera } = useThree();
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
 
   const [faceIndexX, setFaceIndexX] = useState(0);
   const [faceIndexY, setFaceIndexY] = useState(0);
@@ -218,14 +220,33 @@ function DashboardCube({ faceData }) {
       dragState.current.deltaY = e.clientY - dragState.current.startY;
     };
 
-    const onPointerUp = () => {
+    const onPointerUp = (e) => {
       if (!dragState.current.isDragging) return;
 
       const dragX = dragState.current.deltaX;
       const dragY = dragState.current.deltaY;
       const threshold = 30;
+      const clickThreshold = 5;
 
-      if (Math.abs(dragX) > Math.abs(dragY) && Math.abs(dragX) > threshold) {
+      const isClick =
+        Math.abs(dragX) < clickThreshold && Math.abs(dragY) < clickThreshold;
+
+      if (isClick && meshRef.current && onFaceClick) {
+        const rect = gl.domElement.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+          ((e.clientX - rect.left) / rect.width) * 2 - 1,
+          -((e.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObject(meshRef.current);
+        if (hits.length > 0) {
+          const faceIndex = Math.floor(hits[0].faceIndex / 2);
+          const face = faces[faceIndex];
+          if (face && !face.diagonal) {
+            onFaceClick(face.title);
+          }
+        }
+      } else if (Math.abs(dragX) > Math.abs(dragY) && Math.abs(dragX) > threshold) {
         if (dragX > 0) {
           setFaceIndexY((prev) => prev + 1);
         } else {
@@ -292,7 +313,7 @@ function DashboardCube({ faceData }) {
 
   return (
     <group ref={groupRef} position={[0, 0.4, 0]} scale={2.3}>
-      <mesh material={materials}>
+      <mesh ref={meshRef} material={materials}>
         <boxGeometry args={[1.5, 1.5, 1.5]} />
       </mesh>
 
@@ -303,7 +324,7 @@ function DashboardCube({ faceData }) {
   );
 }
 
-export default function CubeModel({ cubeData }) {
+export default function CubeModel({ cubeData, onFaceClick }) {
   const faceData = cubeData && cubeData.length ? cubeData : DEFAULT_FACES;
 
   return (
@@ -321,7 +342,7 @@ export default function CubeModel({ cubeData }) {
 
       <Suspense fallback={null}>
         <Environment preset="city" />
-        <DashboardCube faceData={faceData} />
+        <DashboardCube faceData={faceData} onFaceClick={onFaceClick} />
       </Suspense>
     </Canvas>
   );
