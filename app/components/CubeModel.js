@@ -1,6 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Environment } from "@react-three/drei";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -16,14 +17,14 @@ function createDiagonalTexture(text, width = 500, height = 500) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  ctx.fillStyle = "rgba(20, 50, 100, 0.82)";
+  ctx.fillStyle = "rgba(18, 45, 110, 0.9)";
   ctx.fillRect(0, 0, width, height);
 
-  ctx.strokeStyle = "rgba(80, 200, 255, 0.65)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
   ctx.lineWidth = 4.5;
   ctx.strokeRect(3, 3, width - 6, height - 6);
 
-  ctx.strokeStyle = "rgba(80, 200, 255, 0.25)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
   ctx.lineWidth = 1.5;
   ctx.strokeRect(15, 15, width - 30, height - 30);
 
@@ -47,6 +48,13 @@ function createDiagonalTexture(text, width = 500, height = 500) {
   return texture;
 }
 
+function isAlertValue(val) {
+  const str = String(val).trim();
+  if (!str || /[%a-zA-Z]/.test(str)) return false;
+  const num = parseFloat(str);
+  return !isNaN(num) && num > 0;
+}
+
 function createFaceTexture(title, items, width = 500, height = 500) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -58,24 +66,24 @@ function createFaceTexture(title, items, width = 500, height = 500) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  ctx.fillStyle = "rgba(20, 50, 100, 0.82)";
+  ctx.fillStyle = "rgba(18, 45, 110, 0.9)";
   ctx.fillRect(0, 0, width, height);
 
-  ctx.strokeStyle = "rgba(80, 200, 255, 0.65)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
   ctx.lineWidth = 4.5;
   ctx.strokeRect(3, 3, width - 6, height - 6);
 
-  ctx.strokeStyle = "rgba(80, 200, 255, 0.25)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
   ctx.lineWidth = 1.5;
   ctx.strokeRect(15, 15, width - 30, height - 30);
 
-  ctx.fillStyle = "#00d4ff";
+  ctx.fillStyle = "#ffffff";
   ctx.font = "bold 35px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
   ctx.fillText(title, width / 2, 53);
 
-  ctx.strokeStyle = "rgba(80, 200, 255, 0.45)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(39, 70);
@@ -88,12 +96,19 @@ function createFaceTexture(title, items, width = 500, height = 500) {
   let y = 107;
 
   items.forEach((item) => {
-    ctx.fillStyle = "#ffffff";
+    const alert = isAlertValue(item.value);
+
+    if (alert) {
+      ctx.fillStyle = "rgba(255, 50, 50, 0.08)";
+      ctx.fillRect(30, y - 20, width - 60, 30);
+    }
+
+    ctx.fillStyle = alert ? "#ff4444" : "#ffffff";
     ctx.font = "20px Arial";
     ctx.fillText(item.label, 34, y);
 
     if (item.value) {
-      ctx.fillStyle = "#00ff88";
+      ctx.fillStyle = alert ? "#ff4444" : "#ffffff";
       ctx.font = "bold 20px Arial";
       ctx.textAlign = "right";
       ctx.fillText(item.value, width - 34, y);
@@ -110,73 +125,28 @@ function createFaceTexture(title, items, width = 500, height = 500) {
   texture.magFilter = THREE.LinearFilter;
   texture.generateMipmaps = false;
 
-  return texture;
+  return { texture };
 }
 
-const faceData = [
-  {
-    title: "QUALITY",
-    items: [
-      { label: "Pharma Sterile", value: "98%" },
-      { label: "Differential Pressure", value: "Pass" },
-      { label: "Min. Solid", value: "103%" },
-      { label: "Coating Thickness", value: "OK" },
-    ],
-  },
-  {
-    title: "DELIVERY",
-    items: [
-      { label: "On-Time Shipment", value: "97%" },
-      { label: "Order Fulfillment", value: "99%" },
-      { label: "Lead Time", value: "3 Days" },
-      { label: "Backorder Rate", value: "1.2%" },
-    ],
-  },
-  {
-    title: "1QDCI",
-    diagonal: true,
-    items: [],
-  },
-  {
-    title: "INVENTORY",
-    items: [
-      { label: "Raw Materials", value: "85%" },
-      { label: "WIP", value: "12 Units" },
-      { label: "Finished Goods", value: "340" },
-      { label: "Turnover Rate", value: "4.2x" },
-    ],
-  },
-  {
-    title: "SAFETY",
-    items: [
-      { label: "Packaging Material Defect", value: "0" },
-      { label: "Mfg. Plan Adherence", value: "100%" },
-      { label: "Prod. Plan Adherence", value: "100%" },
-      { label: "RM & FG Release", value: "100%" },
-      { label: "Line Clearance > 1st", value: "100%" },
-    ],
-  },
-  {
-    title: "COST",
-    items: [
-      { label: "Scrap Rate", value: "0.8%" },
-      { label: "Yield", value: "99.2%" },
-      { label: "OEE", value: "87%" },
-      { label: "Energy Usage", value: "Normal" },
-    ],
-  },
+const DEFAULT_FACES = [
+  { title: "QUALITY", items: [] },
+  { title: "DELIVERY", items: [] },
+  { title: "1QDCI", diagonal: true, items: [] },
+  { title: "INVENTORY", items: [] },
+  { title: "SAFETY", items: [] },
+  { title: "COST", items: [] },
 ];
 
 const FACE_STEP = Math.PI / 2;
 const START_ROTATION_Y = -0.26;
-const START_ROTATION_X = 0;
 
-function DashboardCube() {
-  const groupRef = useRef(null);
+function DashboardCube({ faceData }) {
+  const yawRef = useRef(null);
+  const pitchRef = useRef(null);
   const { gl } = useThree();
 
-  const [faceIndexX, setFaceIndexX] = useState(0); // up/down
-  const [faceIndexY, setFaceIndexY] = useState(0); // left/right
+  const [faceIndexX, setFaceIndexX] = useState(0);
+  const [faceIndexY, setFaceIndexY] = useState(0);
 
   const dragState = useRef({
     isDragging: false,
@@ -186,19 +156,47 @@ function DashboardCube() {
     deltaY: 0,
   });
 
-  const materials = useMemo(() => {
-    return faceData.map((face) => {
-      const texture = face.diagonal
-        ? createDiagonalTexture(face.title)
-        : createFaceTexture(face.title, face.items);
+  const faces = faceData && faceData.length ? faceData : DEFAULT_FACES;
 
-      return new THREE.MeshBasicMaterial({
-        map: texture,
-        transparent: false,
-        side: THREE.FrontSide,
-      });
+  const materials = useMemo(() => {
+    const mats = [];
+
+    faces.forEach((face) => {
+      if (face.diagonal) {
+        const tex = createDiagonalTexture(face.title);
+        mats.push(
+          new THREE.MeshPhysicalMaterial({
+            map: tex,
+            metalness: 0.3,
+            roughness: 0.15,
+            reflectivity: 0.8,
+            clearcoat: 0.6,
+            clearcoatRoughness: 0.1,
+            envMapIntensity: 0.9,
+            transparent: false,
+            side: THREE.FrontSide,
+          })
+        );
+      } else {
+        const { texture } = createFaceTexture(face.title, face.items);
+        mats.push(
+          new THREE.MeshPhysicalMaterial({
+            map: texture,
+            metalness: 0.3,
+            roughness: 0.15,
+            reflectivity: 0.8,
+            clearcoat: 0.6,
+            clearcoatRoughness: 0.1,
+            envMapIntensity: 0.9,
+            transparent: false,
+            side: THREE.FrontSide,
+          })
+        );
+      }
     });
-  }, []);
+
+    return mats;
+  }, [faces]);
 
   const edgeGeometry = useMemo(() => {
     return new THREE.EdgesGeometry(new THREE.BoxGeometry(1.51, 1.51, 1.51));
@@ -217,7 +215,6 @@ function DashboardCube() {
 
     const onPointerMove = (e) => {
       if (!dragState.current.isDragging) return;
-
       dragState.current.deltaX = e.clientX - dragState.current.startX;
       dragState.current.deltaY = e.clientY - dragState.current.startY;
     };
@@ -231,19 +228,16 @@ function DashboardCube() {
 
       if (Math.abs(dragX) > Math.abs(dragY) && Math.abs(dragX) > threshold) {
         if (dragX > 0) {
-          // drag right
           setFaceIndexY((prev) => prev + 1);
         } else {
-          // drag left
           setFaceIndexY((prev) => prev - 1);
         }
+        setFaceIndexX(0);
       } else if (Math.abs(dragY) > Math.abs(dragX) && Math.abs(dragY) > threshold) {
-        if (dragY < 0) {
-          // drag down
-          setFaceIndexX((prev) => Math.max(prev - 1, -1));
+        if (dragY > 0) {
+          setFaceIndexX(1);
         } else {
-          // drag up
-          setFaceIndexX((prev) => Math.min(prev + 1, 1));
+          setFaceIndexX(-1);
         }
       }
 
@@ -270,43 +264,44 @@ function DashboardCube() {
   }, [gl]);
 
   useFrame(() => {
-    if (!groupRef.current) return;
+    if (!yawRef.current || !pitchRef.current) return;
 
     const targetY = START_ROTATION_Y + faceIndexY * FACE_STEP;
-    const targetX = START_ROTATION_X + faceIndexX * FACE_STEP;
+    const targetX = faceIndexX * FACE_STEP;
 
-    groupRef.current.rotation.y = THREE.MathUtils.lerp(
-      groupRef.current.rotation.y,
+    yawRef.current.rotation.y = THREE.MathUtils.lerp(
+      yawRef.current.rotation.y,
       targetY,
       0.12
     );
 
-    groupRef.current.rotation.x = THREE.MathUtils.lerp(
-      groupRef.current.rotation.x,
+    pitchRef.current.rotation.x = THREE.MathUtils.lerp(
+      pitchRef.current.rotation.x,
       targetX,
       0.12
     );
   });
 
   return (
-    <group
-      ref={groupRef}
-      position={[0, 0, 0]}
-      rotation={[START_ROTATION_X, START_ROTATION_Y, 0]}
-      scale={1.8}
-    >
-      <mesh material={materials}>
-        <boxGeometry args={[1.5, 1.5, 1.5]} />
-      </mesh>
+    <group ref={yawRef} position={[0, 0.4, 0]} rotation={[0, START_ROTATION_Y, 0]}>
+      <group ref={pitchRef}>
+        <group scale={2.3}>
+          <mesh material={materials}>
+            <boxGeometry args={[1.5, 1.5, 1.5]} />
+          </mesh>
 
-      <lineSegments geometry={edgeGeometry}>
-        <lineBasicMaterial color="#60ccff" transparent opacity={0.75} />
-      </lineSegments>
+          <lineSegments geometry={edgeGeometry}>
+            <lineBasicMaterial color="#ffffff" transparent opacity={0.25} />
+          </lineSegments>
+        </group>
+      </group>
     </group>
   );
 }
 
-export default function CubeModel() {
+export default function CubeModel({ cubeData }) {
+  const faceData = cubeData && cubeData.length ? cubeData : DEFAULT_FACES;
+
   return (
     <Canvas
       camera={{ position: [4.8, 2.4, 4.8], fov: 50 }}
@@ -316,10 +311,13 @@ export default function CubeModel() {
         gl.setClearColor(0x000000, 0);
       }}
     >
-      <ambientLight intensity={1} />
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[5, 5, 5]} intensity={0.8} />
+      <directionalLight position={[-3, 2, -4]} intensity={0.3} />
 
       <Suspense fallback={null}>
-        <DashboardCube />
+        <Environment preset="city" />
+        <DashboardCube faceData={faceData} />
       </Suspense>
     </Canvas>
   );
