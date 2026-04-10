@@ -267,9 +267,12 @@ function DashboardCube({ faceData }) {
 
     let targetEuler;
     if (faceIndexX !== 0) {
+      const tilt = faceIndexX === 1
+        ? FACE_STEP - 0.3
+        : -(FACE_STEP - 0.0);
       targetEuler = new THREE.Euler(
-        faceIndexX * FACE_STEP,
-        START_ROTATION_Y,
+        tilt,
+        START_ROTATION_Y + 0.4,
         0,
         "XYZ"
       );
