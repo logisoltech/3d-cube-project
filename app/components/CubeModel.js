@@ -141,8 +141,7 @@ const FACE_STEP = Math.PI / 2;
 const START_ROTATION_Y = -0.26;
 
 function DashboardCube({ faceData }) {
-  const yawRef = useRef(null);
-  const pitchRef = useRef(null);
+  const groupRef = useRef(null);
   const { gl } = useThree();
 
   const [faceIndexX, setFaceIndexX] = useState(0);
@@ -235,9 +234,9 @@ function DashboardCube({ faceData }) {
         setFaceIndexX(0);
       } else if (Math.abs(dragY) > Math.abs(dragX) && Math.abs(dragY) > threshold) {
         if (dragY > 0) {
-          setFaceIndexX(1);
+          setFaceIndexX((prev) => Math.min(prev + 1, 1));
         } else {
-          setFaceIndexX(-1);
+          setFaceIndexX((prev) => Math.max(prev - 1, -1));
         }
       }
 
@@ -264,37 +263,38 @@ function DashboardCube({ faceData }) {
   }, [gl]);
 
   useFrame(() => {
-    if (!yawRef.current || !pitchRef.current) return;
+    if (!groupRef.current) return;
 
-    const targetY = START_ROTATION_Y + faceIndexY * FACE_STEP;
-    const targetX = faceIndexX * FACE_STEP;
+    let targetEuler;
+    if (faceIndexX !== 0) {
+      targetEuler = new THREE.Euler(
+        faceIndexX * FACE_STEP,
+        START_ROTATION_Y,
+        0,
+        "XYZ"
+      );
+    } else {
+      targetEuler = new THREE.Euler(
+        0,
+        START_ROTATION_Y + faceIndexY * FACE_STEP,
+        0,
+        "XYZ"
+      );
+    }
 
-    yawRef.current.rotation.y = THREE.MathUtils.lerp(
-      yawRef.current.rotation.y,
-      targetY,
-      0.12
-    );
-
-    pitchRef.current.rotation.x = THREE.MathUtils.lerp(
-      pitchRef.current.rotation.x,
-      targetX,
-      0.12
-    );
+    const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
+    groupRef.current.quaternion.slerp(targetQuat, 0.12);
   });
 
   return (
-    <group ref={yawRef} position={[0, 0.4, 0]} rotation={[0, START_ROTATION_Y, 0]}>
-      <group ref={pitchRef}>
-        <group scale={2.3}>
-          <mesh material={materials}>
-            <boxGeometry args={[1.5, 1.5, 1.5]} />
-          </mesh>
+    <group ref={groupRef} position={[0, 0.4, 0]} scale={2.3}>
+      <mesh material={materials}>
+        <boxGeometry args={[1.5, 1.5, 1.5]} />
+      </mesh>
 
-          <lineSegments geometry={edgeGeometry}>
-            <lineBasicMaterial color="#ffffff" transparent opacity={0.25} />
-          </lineSegments>
-        </group>
-      </group>
+      <lineSegments geometry={edgeGeometry}>
+        <lineBasicMaterial color="#ffffff" transparent opacity={0.25} />
+      </lineSegments>
     </group>
   );
 }
