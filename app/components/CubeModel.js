@@ -270,10 +270,11 @@ function DashboardCube({ faceData }) {
       const tilt = faceIndexX === 1
         ? FACE_STEP - 0.3
         : -(FACE_STEP - 0.0);
+      const spin = faceIndexX === 1 ? -0.4 : 0.4;
       targetEuler = new THREE.Euler(
         tilt,
-        START_ROTATION_Y + 0.4,
-        0,
+        START_ROTATION_Y,
+        spin,
         "XYZ"
       );
     } else {
