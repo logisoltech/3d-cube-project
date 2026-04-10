@@ -78,20 +78,16 @@ export default function Home() {
     return unique;
   }, [rows]);
 
-  const latestDate = useMemo(() => {
-    const dates = [...new Set(rows.map((row) => row.date).filter(Boolean))];
-    if (!dates.length) return "";
-    return dates.sort().at(-1) || "";
-  }, [rows]);
-
   const selectedRows = useMemo(() => {
     if (!selectedCategory) return [];
-    return rows.filter(
-      (row) =>
-        row.category.toLowerCase() === selectedCategory.toLowerCase() &&
-        (!latestDate || row.date === latestDate)
+    const categoryRows = rows.filter(
+      (row) => row.category.toLowerCase() === selectedCategory.toLowerCase()
     );
-  }, [rows, selectedCategory, latestDate]);
+    const dates = [...new Set(categoryRows.map((r) => r.date).filter(Boolean))];
+    const latestDate = dates.length ? dates.sort().at(-1) : "";
+    if (!latestDate) return categoryRows;
+    return categoryRows.filter((row) => row.date === latestDate);
+  }, [rows, selectedCategory]);
 
   function openCategory(category) {
     setSelectedCategory(category);
@@ -235,7 +231,7 @@ export default function Home() {
               <div>
                 <h2 className="modalTitle">{selectedCategory}</h2>
                 <p className="modalSubtext">
-                  Showing {latestDate ? `latest data for ${latestDate}` : "available data"}
+                  Showing {selectedRows[0]?.date ? `latest data for ${selectedRows[0].date}` : "available data"}
                 </p>
               </div>
 
