@@ -18,6 +18,7 @@ export default function Home() {
   const [isMetricModalOpen, setIsMetricModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [excelError, setExcelError] = useState("");
+  const [targetFace, setTargetFace] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -169,7 +170,7 @@ export default function Home() {
         <source src="/Empty.mp4" type="video/mp4" />
       </video>
 
-      {/* Top curved band with logo */}
+      {/* Top curved band with logo + title */}
       <div
         style={{
           position: "absolute",
@@ -186,21 +187,61 @@ export default function Home() {
         <div
           className="curvedBand"
           style={{
+            position: "relative",
             width: "135%",
             height: "170px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
           }}
         >
-          <Image
-            src="/logo.png"
-            alt="Hoechst Pakistan"
-            width={300}
-            height={94}
-            style={{ marginTop: "30px" }}
-            priority
-          />
+          {/* Logo – pinned to viewport left edge */}
+          <div style={{
+            position: "absolute",
+            top: "50%",
+            left: "calc((100% - 100vw) / 2 + 40px)",
+            transform: "translateY(-55%)",
+          }}>
+            <Image
+              src="/logo.png"
+              alt="Hoechst Pakistan"
+              width={240}
+              height={75}
+              priority
+            />
+          </div>
+
+          {/* Curved text – pinned to viewport right area */}
+          <div style={{
+            position: "absolute",
+            top: "50%",
+            right: "calc((100% - 100vw) / 2 + 40px)",
+            transform: "translateY(-40%)",
+          }}>
+            <svg
+              className="bannerTextSvg"
+              viewBox="0 0 900 80"
+            >
+              <defs>
+                <path
+                  id="bannerTextArc"
+                  d="M 10 58 Q 450 74 890 24"
+                  fill="none"
+                />
+              </defs>
+              <text
+                fill="#0a2a5e"
+              fontSize="42"
+              fontWeight="900"
+              letterSpacing="5"
+              >
+                <textPath
+                  href="#bannerTextArc"
+                  startOffset="50%"
+                  textAnchor="middle"
+                >
+                  WORLD CLASS MANUFACTURING
+                </textPath>
+              </text>
+            </svg>
+          </div>
         </div>
       </div>
 
@@ -216,7 +257,7 @@ export default function Home() {
           pointerEvents: "auto",
         }}
       >
-        <CubeModel cubeData={cubeData} onFaceClick={(title) => openCategory(title)} />
+        <CubeModel cubeData={cubeData} onFaceClick={(title) => openCategory(title)} targetFace={targetFace} />
       </div>
 
       {/* Left stacked buttons */}
@@ -245,7 +286,7 @@ export default function Home() {
           categories.map((category) => (
             <button
               key={category}
-              onClick={() => openCategory(category)}
+              onClick={() => setTargetFace(category.toUpperCase())}
               className="categoryButton"
             >
               {category}
@@ -378,6 +419,13 @@ export default function Home() {
             #000
           );
           clip-path: ellipse(calc(var(--c) * 1%) 100% at top);
+        }
+
+        .bannerTextSvg {
+          width: 780px;
+          height: 75px;
+          flex-shrink: 0;
+          overflow: visible;
         }
 
         .categoryButton,
@@ -776,6 +824,7 @@ export default function Home() {
             width: 160%;
             height: 140px;
           }
+          .bannerTextSvg { width: 350px; height: 45px; }
           .hudTitle { font-size: 20px; }
           .hudFrame { max-height: 86vh; }
           .hudBody { max-height: calc(86vh - 100px); }

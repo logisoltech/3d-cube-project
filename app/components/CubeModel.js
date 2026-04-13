@@ -140,7 +140,16 @@ const DEFAULT_FACES = [
 const FACE_STEP = Math.PI / 2;
 const START_ROTATION_Y = -0.26;
 
-function DashboardCube({ faceData, onFaceClick }) {
+const FACE_ROTATION_MAP = {
+  QUALITY:   { x: 0, y: 0 },
+  SAFETY:    { x: 0, y: 1 },
+  COST:      { x: 0, y: -1 },
+  DELIVERY:  { x: 0, y: 2 },
+  "1QDCI":   { x: 1, y: 0 },
+  INVENTORY: { x: -1, y: 0 },
+};
+
+function DashboardCube({ faceData, onFaceClick, targetFace }) {
   const groupRef = useRef(null);
   const meshRef = useRef(null);
   const { gl, camera } = useThree();
@@ -158,6 +167,15 @@ function DashboardCube({ faceData, onFaceClick }) {
   });
 
   const faces = faceData && faceData.length ? faceData : DEFAULT_FACES;
+
+  useEffect(() => {
+    if (!targetFace) return;
+    const rot = FACE_ROTATION_MAP[targetFace.toUpperCase()];
+    if (rot) {
+      setFaceIndexX(rot.x);
+      setFaceIndexY(rot.y);
+    }
+  }, [targetFace]);
 
   const materials = useMemo(() => {
     const mats = [];
@@ -324,7 +342,7 @@ function DashboardCube({ faceData, onFaceClick }) {
   );
 }
 
-export default function CubeModel({ cubeData, onFaceClick }) {
+export default function CubeModel({ cubeData, onFaceClick, targetFace }) {
   const faceData = cubeData && cubeData.length ? cubeData : DEFAULT_FACES;
 
   return (
@@ -342,7 +360,7 @@ export default function CubeModel({ cubeData, onFaceClick }) {
 
       <Suspense fallback={null}>
         <Environment preset="city" />
-        <DashboardCube faceData={faceData} onFaceClick={onFaceClick} />
+        <DashboardCube faceData={faceData} onFaceClick={onFaceClick} targetFace={targetFace} />
       </Suspense>
     </Canvas>
   );
