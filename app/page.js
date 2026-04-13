@@ -229,8 +229,9 @@ export default function Home() {
               <text
                 fill="#0a2a5e"
               fontSize="42"
-              fontWeight="900"
+              fontWeight="700"
               letterSpacing="5"
+              fontFamily="var(--font-poppins), Poppins, sans-serif"
               >
                 <textPath
                   href="#bannerTextArc"

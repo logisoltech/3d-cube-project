@@ -137,9 +137,6 @@ const DEFAULT_FACES = [
   { title: "COST", items: [] },
 ];
 
-const FACE_STEP = Math.PI / 2;
-const START_ROTATION_Y = -0.26;
-
 const FACE_ROTATION_MAP = {
   QUALITY:   { x: 0, y: 0 },
   SAFETY:    { x: 0, y: 1 },
@@ -148,6 +145,31 @@ const FACE_ROTATION_MAP = {
   "1QDCI":   { x: 1, y: 0 },
   INVENTORY: { x: -1, y: 0 },
 };
+
+const FACE_STEP = Math.PI / 2;
+const START_ROTATION_Y = -0.26;
+
+const _helper = new THREE.Object3D();
+_helper.lookAt(4.8, 2.4, 4.8);
+const _lookAtQuat = _helper.quaternion.clone();
+
+const _topBottomPreEulers = {
+  "1QDCI":   new THREE.Euler(Math.PI / 2, 0, 0),
+  INVENTORY: new THREE.Euler(-Math.PI / 2, 0, 0),
+};
+const FLAT_QUATS = {};
+for (const [name, euler] of Object.entries(_topBottomPreEulers)) {
+  FLAT_QUATS[name] = _lookAtQuat.clone().multiply(
+    new THREE.Quaternion().setFromEuler(euler)
+  );
+}
+
+function getTargetQuat(fx, fy) {
+  if (fx === 1) return FLAT_QUATS["1QDCI"];
+  if (fx === -1) return FLAT_QUATS["INVENTORY"];
+  const euler = new THREE.Euler(0, START_ROTATION_Y + fy * FACE_STEP, 0, "XYZ");
+  return new THREE.Quaternion().setFromEuler(euler);
+}
 
 function DashboardCube({ faceData, onFaceClick, targetFace }) {
   const groupRef = useRef(null);
@@ -301,44 +323,37 @@ function DashboardCube({ faceData, onFaceClick, targetFace }) {
     };
   }, [gl]);
 
+  const ambientRef = useRef(null);
+  const dir1Ref = useRef(null);
+  const dir2Ref = useRef(null);
+  const isInventory = faceIndexX === -1;
+
   useFrame(() => {
     if (!groupRef.current) return;
-
-    let targetEuler;
-    if (faceIndexX !== 0) {
-      const tilt = faceIndexX === 1
-        ? FACE_STEP - 0.3
-        : -(FACE_STEP - 0.0);
-      const spin = faceIndexX === 1 ? -0.4 : 0.4;
-      targetEuler = new THREE.Euler(
-        tilt,
-        START_ROTATION_Y,
-        spin,
-        "XYZ"
-      );
-    } else {
-      targetEuler = new THREE.Euler(
-        0,
-        START_ROTATION_Y + faceIndexY * FACE_STEP,
-        0,
-        "XYZ"
-      );
-    }
-
-    const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
+    const targetQuat = getTargetQuat(faceIndexX, faceIndexY);
     groupRef.current.quaternion.slerp(targetQuat, 0.12);
+
+    const targetIntensity = isInventory ? 0 : 1;
+    if (ambientRef.current) ambientRef.current.intensity = THREE.MathUtils.lerp(ambientRef.current.intensity, targetIntensity * 0.8, 0.08);
+    if (dir1Ref.current) dir1Ref.current.intensity = THREE.MathUtils.lerp(dir1Ref.current.intensity, targetIntensity * 0.8, 0.08);
+    if (dir2Ref.current) dir2Ref.current.intensity = THREE.MathUtils.lerp(dir2Ref.current.intensity, targetIntensity * 0.3, 0.08);
   });
 
   return (
-    <group ref={groupRef} position={[0, 0.4, 0]} scale={2.3}>
-      <mesh ref={meshRef} material={materials}>
-        <boxGeometry args={[1.5, 1.5, 1.5]} />
-      </mesh>
+    <>
+      <ambientLight ref={ambientRef} intensity={0.8} />
+      <directionalLight ref={dir1Ref} position={[5, 5, 5]} intensity={0.8} />
+      <directionalLight ref={dir2Ref} position={[-3, 2, -4]} intensity={0.3} />
+      <group ref={groupRef} position={[0, 0.4, 0]} scale={2.3}>
+        <mesh ref={meshRef} material={materials}>
+          <boxGeometry args={[1.5, 1.5, 1.5]} />
+        </mesh>
 
-      <lineSegments geometry={edgeGeometry}>
-        <lineBasicMaterial color="#ffffff" transparent opacity={0.25} />
-      </lineSegments>
-    </group>
+        <lineSegments geometry={edgeGeometry}>
+          <lineBasicMaterial color="#ffffff" transparent opacity={0.25} />
+        </lineSegments>
+      </group>
+    </>
   );
 }
 
@@ -354,10 +369,6 @@ export default function CubeModel({ cubeData, onFaceClick, targetFace }) {
         gl.setClearColor(0x000000, 0);
       }}
     >
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[5, 5, 5]} intensity={0.8} />
-      <directionalLight position={[-3, 2, -4]} intensity={0.3} />
-
       <Suspense fallback={null}>
         <Environment preset="city" />
         <DashboardCube faceData={faceData} onFaceClick={onFaceClick} targetFace={targetFace} />
