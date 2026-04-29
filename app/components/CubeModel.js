@@ -2,11 +2,53 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
-// Creates diagonal heading texture for the 1QDCI face
-function createDiagonalTexture(text, width = 500, height = 500) {
+function getTodayDiagonalLabels() {
+  const d = new Date();
+  return {
+    weekday: d.toLocaleDateString(undefined, { weekday: "long" }),
+    dateLine: d.toLocaleDateString(undefined, {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }),
+  };
+}
+
+const QDCI_TAGLINE = "Only Pharma Solid and Pharma Sterile";
+
+function wrapCenteredLines(ctx, text, cx, baselineY, maxWidth, lineHeight) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = "";
+
+  for (const w of words) {
+    const trial = line ? `${line} ${w}` : w;
+    if (ctx.measureText(trial).width <= maxWidth) {
+      line = trial;
+    } else {
+      if (line) lines.push(line);
+      line = w;
+    }
+  }
+  if (line) lines.push(line);
+
+  let y = baselineY;
+  lines.forEach((ln) => {
+    ctx.fillText(ln, cx, y);
+    y += lineHeight;
+  });
+}
+
+// Top face texture: 1QDCI title + day / date / tagline (all horizontal)
+function createDiagonalTexture(
+  text,
+  today = getTodayDiagonalLabels(),
+  width = 500,
+  height = 500
+) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -28,15 +70,39 @@ function createDiagonalTexture(text, width = 500, height = 500) {
   ctx.lineWidth = 1.5;
   ctx.strokeRect(15, 15, width - 30, height - 30);
 
-  ctx.save();
-  ctx.translate(width / 2, height / 2);
-  ctx.rotate(-Math.PI / 6);
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 117px Arial";
   ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(text, 0, 0);
-  ctx.restore();
+  ctx.textBaseline = "alphabetic";
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 68px Arial";
+  ctx.fillText(text, width / 2, 104);
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(48, 138);
+  ctx.lineTo(width - 48, 138);
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(180, 230, 255, 0.95)";
+  ctx.font = "600 42px Arial";
+  ctx.fillText(today.weekday, width / 2, 198);
+
+  ctx.fillStyle = "rgba(230, 240, 255, 0.92)";
+  ctx.font = "600 36px Arial";
+  ctx.fillText(today.dateLine, width / 2, 262);
+
+  ctx.fillStyle = "rgba(200, 220, 245, 0.92)";
+  ctx.font = "500 28px Arial";
+  const maxW = width - 40;
+  wrapCenteredLines(
+    ctx,
+    QDCI_TAGLINE,
+    width / 2,
+    324,
+    maxW,
+    34
+  );
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -164,6 +230,9 @@ for (const [name, euler] of Object.entries(_topBottomPreEulers)) {
   );
 }
 
+/** Env map bias for 1QDCI (top) only — shifts reflection toward the viewer’s right edge of the face */
+const QDCI_ENV_MAP_ROTATION = new THREE.Euler(0.18, -2.05, 0.1, "XYZ");
+
 function getTargetQuat(fx, fy) {
   if (fx === 1) return FLAT_QUATS["1QDCI"];
   if (fx === -1) return FLAT_QUATS["INVENTORY"];
@@ -174,11 +243,30 @@ function getTargetQuat(fx, fy) {
 function DashboardCube({ faceData, onFaceClick, targetFace }) {
   const groupRef = useRef(null);
   const meshRef = useRef(null);
+  const topSpotRef = useRef(null);
+  const topSpotTargetRef = useRef(null);
   const { gl, camera } = useThree();
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
 
+  useLayoutEffect(() => {
+    const spot = topSpotRef.current;
+    const tgt = topSpotTargetRef.current;
+    if (spot && tgt) {
+      spot.target = tgt;
+      tgt.updateMatrixWorld(true);
+    }
+  }, []);
+
   const [faceIndexX, setFaceIndexX] = useState(0);
   const [faceIndexY, setFaceIndexY] = useState(0);
+  /** Refreshes 1QDCI face texture periodically so day/date stays current */
+  const [todayTick, setTodayTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    setTodayTick(Date.now());
+    const id = window.setInterval(() => setTodayTick(Date.now()), 60 * 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const dragState = useRef({
     isDragging: false,
@@ -201,23 +289,24 @@ function DashboardCube({ faceData, onFaceClick, targetFace }) {
 
   const materials = useMemo(() => {
     const mats = [];
+    const todayLbl = getTodayDiagonalLabels();
 
     faces.forEach((face) => {
       if (face.diagonal) {
-        const tex = createDiagonalTexture(face.title);
-        mats.push(
-          new THREE.MeshPhysicalMaterial({
-            map: tex,
-            metalness: 0.3,
-            roughness: 0.15,
-            reflectivity: 0.8,
-            clearcoat: 0.6,
-            clearcoatRoughness: 0.1,
-            envMapIntensity: 0.9,
-            transparent: false,
-            side: THREE.FrontSide,
-          })
-        );
+        const tex = createDiagonalTexture(face.title, todayLbl);
+        const qdciMat = new THREE.MeshPhysicalMaterial({
+          map: tex,
+          metalness: 0.3,
+          roughness: 0.15,
+          reflectivity: 0.8,
+          clearcoat: 0.6,
+          clearcoatRoughness: 0.1,
+          envMapIntensity: 0.9,
+          transparent: false,
+          side: THREE.FrontSide,
+        });
+        qdciMat.envMapRotation.copy(QDCI_ENV_MAP_ROTATION);
+        mats.push(qdciMat);
       } else {
         const { texture } = createFaceTexture(face.title, face.items);
         mats.push(
@@ -237,7 +326,7 @@ function DashboardCube({ faceData, onFaceClick, targetFace }) {
     });
 
     return mats;
-  }, [faces]);
+  }, [faces, todayTick]);
 
   const edgeGeometry = useMemo(() => {
     return new THREE.EdgesGeometry(new THREE.BoxGeometry(1.51, 1.51, 1.51));
@@ -326,25 +415,50 @@ function DashboardCube({ faceData, onFaceClick, targetFace }) {
   const ambientRef = useRef(null);
   const dir1Ref = useRef(null);
   const dir2Ref = useRef(null);
-  const isInventory = faceIndexX === -1;
+  const isInventoryFlat = faceIndexX === -1;
+  const isQdciFlat = faceIndexX === 1;
+  const dimsSceneLights = isInventoryFlat || isQdciFlat;
+
+  const TOP_SPOT_INTENSITY_DEFAULT = 11;
 
   useFrame(() => {
     if (!groupRef.current) return;
     const targetQuat = getTargetQuat(faceIndexX, faceIndexY);
     groupRef.current.quaternion.slerp(targetQuat, 0.12);
 
-    const targetIntensity = isInventory ? 0 : 1;
+    const targetIntensity = dimsSceneLights ? 0 : 1;
     if (ambientRef.current) ambientRef.current.intensity = THREE.MathUtils.lerp(ambientRef.current.intensity, targetIntensity * 0.8, 0.08);
     if (dir1Ref.current) dir1Ref.current.intensity = THREE.MathUtils.lerp(dir1Ref.current.intensity, targetIntensity * 0.8, 0.08);
     if (dir2Ref.current) dir2Ref.current.intensity = THREE.MathUtils.lerp(dir2Ref.current.intensity, targetIntensity * 0.3, 0.08);
+    if (topSpotRef.current) {
+      topSpotRef.current.intensity = THREE.MathUtils.lerp(
+        topSpotRef.current.intensity,
+        dimsSceneLights ? 0 : TOP_SPOT_INTENSITY_DEFAULT,
+        0.08
+      );
+    }
   });
 
   return (
     <>
+      {/* Narrow spot aimed at the top face’s right half so the gleam isn’t confined to center-front */}
+      <object3D ref={topSpotTargetRef} position={[1.72, 2.28, 0.15]} />
+      <spotLight
+        ref={topSpotRef}
+        color="#eaf2ff"
+        position={[10, 12, 6.5]}
+        intensity={11}
+        angle={0.28}
+        penumbra={0.62}
+        distance={48}
+        decay={1.25}
+        castShadow={false}
+      />
+
       <ambientLight ref={ambientRef} intensity={0.8} />
       <directionalLight ref={dir1Ref} position={[5, 5, 5]} intensity={0.8} />
       <directionalLight ref={dir2Ref} position={[-3, 2, -4]} intensity={0.3} />
-      <group ref={groupRef} position={[0, 0.4, 0]} scale={2.3}>
+      <group ref={groupRef} position={[0, 0.56, 0]} scale={2.3}>
         <mesh ref={meshRef} material={materials}>
           <boxGeometry args={[1.5, 1.5, 1.5]} />
         </mesh>
